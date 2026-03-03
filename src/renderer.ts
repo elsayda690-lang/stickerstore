@@ -1,3 +1,22 @@
+// --- بداية "خدعة" الويب عشان Vercel يشتغل ---
+// @ts-ignore
+if (typeof window !== 'undefined' && !window.ipc) {
+  // بنعرف كائن ipc وهمي عشان البرنامج ميهنجش وهو بيدور على Electron
+  // @ts-ignore
+  window.ipc = {
+    getEnv: async () => ({
+      isDevelopment: false,
+      platform: 'linux', 
+      version: '1.0.0-web-prototype'
+    }),
+    checkDbAccess: async () => true,
+    getDbDefaultPath: async () => ':memory:',
+    checkForUpdates: async () => {},
+    initScheduler: async () => {},
+  };
+}
+// --- نهاية "الخدعة" ---
+
 import { CUSTOM_EVENTS } from 'utils/messages';
 import { UnexpectedLogObject } from 'utils/types';
 import { App as VueApp, createApp } from 'vue';
@@ -20,8 +39,14 @@ import { setLanguageMap } from './utils/language';
   }
   fyo.store.language = language || 'English';
 
-  registerIpcRendererListeners();
-  const { isDevelopment, platform, version } = await ipc.getEnv();
+  // بنشغل الـ Listeners فقط لو الـ ipc الحقيقي موجود (جوه البرنامج فعلاً)
+  if (window.ipc && !window.ipc.getEnv.toString().includes('web-prototype')) {
+    registerIpcRendererListeners();
+  }
+
+  // @ts-ignore
+  // هنا البرنامج هياخد البيانات الوهمية اللي عرفناها فوق ويكمل عادي
+  const { isDevelopment, platform, version } = await window.ipc.getEnv();
 
   fyo.store.isDevelopment = isDevelopment;
   fyo.store.appVersion = version;
@@ -63,7 +88,6 @@ import { setLanguageMap } from './utils/language';
 function setErrorHandlers(app: VueApp) {
   window.onerror = (message, source, lineno, colno, error) => {
     error = error ?? new Error('triggered in window.onerror');
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     handleError(true, error, { message, source, lineno, colno });
   };
 
@@ -74,41 +98,29 @@ function setErrorHandlers(app: VueApp) {
     } else {
       error = new Error(String(event.reason));
     }
-
-    // eslint-disable-next-line no-console
     handleError(true, error).catch((err) => console.error(err));
   };
 
   window.addEventListener(CUSTOM_EVENTS.LOG_UNEXPECTED, (event) => {
     const details = (event as CustomEvent)?.detail as UnexpectedLogObject;
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     sendError(details);
   });
 
   app.config.errorHandler = (err, vm, info) => {
-    const more: Record<string, unknown> = {
-      info,
-    };
-
+    const more: Record<string, unknown> = { info };
     if (vm) {
       const { fullPath, params } = vm.$route;
       more.fullPath = fullPath;
       more.params = stringifyCircular(params ?? {});
       more.props = stringifyCircular(vm.$props ?? {}, true, true);
     }
-
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     handleError(false, err as Error, more);
-    // eslint-disable-next-line no-console
     console.error(err, vm, info);
   };
 }
 
 function setOnWindow(isDevelopment: boolean) {
-  if (!isDevelopment) {
-    return;
-  }
-
+  if (!isDevelopment) return;
   // @ts-ignore
   window.router = router;
   // @ts-ignore
@@ -117,13 +129,9 @@ function setOnWindow(isDevelopment: boolean) {
 
 function getPlatformName(platform: string) {
   switch (platform) {
-    case 'win32':
-      return 'Windows';
-    case 'darwin':
-      return 'Mac';
-    case 'linux':
-      return 'Linux';
-    default:
-      return 'Linux';
+    case 'win32': return 'Windows';
+    case 'darwin': return 'Mac';
+    case 'linux': return 'Linux';
+    default: return 'Linux';
   }
 }
