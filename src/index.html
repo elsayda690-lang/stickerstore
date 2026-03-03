@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frappe Books - Web</title>
+    <title>Frappe Books - Web Prototype</title>
     <script>
         (function() {
-            // تعريف الوظائف الوهمية بناءً على تحليلك للباورشيل
+            // 1. تعريف الوظائف الأساسية للـ IPC
             const mockIpc = {
-                // التعامل مع قواعد البيانات (db)
                 db: {
                     getSchema: async () => [],
                     connect: async () => true,
@@ -16,69 +15,62 @@
                     call: async () => ({}),
                     bespoke: async () => ({})
                 },
-                // التعامل مع المخزن والإعدادات (store / config)
-                store: {}, 
                 get: async (key) => {
                     const data = { 'env': { platform: 'web' }, 'is-dev': false };
                     return data[key] || {};
                 },
-                // وظائف النظام الأساسية
-                getEnv: async () => ({ isDevelopment: false, platform: 'web', version: '1.0.0-web-prototype' }),
+                getEnv: async () => ({ isDevelopment: false, platform: 'web', version: '1.0.0-web' }),
                 checkDbAccess: async () => true,
-                getDbDefaultPath: async (name) => `:memory:`,
+                getDbDefaultPath: async () => `:memory:`,
                 getDbList: async () => [],
-                checkForUpdates: async () => ({}),
-                initScheduler: async () => {},
-                // وظائف الواجهة (Window/Files)
-                minimizeWindow: () => {},
-                toggleMaximize: () => {},
-                closeWindow: () => {},
-                isMaximized: async () => false,
-                isFullscreen: async () => false,
-                openLink: (url) => window.open(url, '_blank'),
-                selectFile: async () => ({ success: false, canceled: true }),
-                getSaveFilePath: async () => ({ canceled: true }),
-                saveData: async () => true,
-                // وظائف الطباعة والـ PDF
-                makePDF: async () => true,
-                printDocument: async () => true,
-                getTemplates: async () => [],
-                // المستمعين (Listeners)
-                registerMainProcessErrorListener: () => {},
-                registerTriggerFrontendActionListener: () => {},
-                registerConsoleLogListener: () => {},
                 on: () => {},
                 send: () => {},
                 invoke: async () => ({})
             };
 
-            // استخدام Proxy لمنع أي TypeError لو نادى وظيفة مش موجودة
+            // 2. الـ Proxy السحري لمنع أي TypeError
             const safeHandler = {
                 get: (target, prop) => {
                     if (prop in target) return target[prop];
-                    // لو نادى حاجة ناقصة زي sendAPIRequest، بنعملها "توليد تلقائي"
-                    return async (...args) => {
-                        console.log(`[IPC Mock] Calling: ${String(prop)}`, args);
+                    // توليد وظيفة وهمية لأي حاجة ناقصة (زي get, set, الخ)
+                    return (...args) => {
+                        console.log(`[Mock] Called: ${String(prop)}`, args);
+                        // لو الوظيفة المطلوبة هي 'get' بنرجع قيمة افتراضية
+                        if (prop === 'get') return (key) => ({ 'language': 'en', 'theme': 'light' }[key]);
                         return {};
                     };
                 }
             };
 
-            const proxy = new Proxy(mockIpc, safeHandler);
+            const safeMock = new Proxy(mockIpc, safeHandler);
 
-            // زرع الـ Proxy في كل المداخل اللي ظهرت في الـ PowerShell
-            window.ipc = proxy;
-            window.electron = { ipcRenderer: proxy };
+            // 3. زرع الخديعة في كل مكان ممكن البرنامج يدور فيه
+            window.ipc = safeMock;
+            window.electron = { ipcRenderer: safeMock };
+            
+            // حل مشكلة this.config.get
+            window.config = safeMock; 
+            
+            // حل مشكلة store
+            window.store = safeMock;
+
+            // بيئة العمل
             window.process = { 
                 platform: 'web', 
                 env: { NODE_ENV: 'production' },
                 nextTick: (cb) => setTimeout(cb, 0)
+            };
+
+            // خديعة require
+            window.require = function(mod) {
+                if (mod === 'electron') return { ipcRenderer: safeMock, remote: safeMock };
+                return safeMock;
             };
         })();
     </script>
 </head>
 <body>
     <div id="app"></div>
-    <script type="module" src="./renderer.ts"></script>
+    <script type="module" src="/renderer.ts"></script>
 </body>
 </html>
