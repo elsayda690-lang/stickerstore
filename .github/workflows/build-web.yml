@@ -1,13 +1,18 @@
-name: Deploy Web Prototype
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [ "main" ]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
+# تصريح بالصلاحيات للنشر على Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
@@ -24,10 +29,12 @@ jobs:
       env:
         NODE_ENV: production
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+    # خطوة النشر الحقيقية
+    - name: Upload Pages Artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        name: web-prototype
-        # المسار اللي إنت لقيته بالظبط (src/dist)
+        # المسار اللي إنت اكتشفته بنفسك
         path: src/dist/
-        if-no-files-found: error
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4
