@@ -5,22 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Frappe Books</title>
+    
+    <script>
+      window.ipc = {
+        get: async (key) => {
+          console.log('IPC Get called for:', key);
+          const mocks = {
+            'env': { isDevelopment: false, platform: 'web' },
+            'config': {},
+            'is-dev': false
+          };
+          return mocks[key] || null;
+        },
+        send: (channel, ...args) => console.log(`IPC Send: ${channel}`, args),
+        invoke: async (channel, ...args) => {
+          console.log(`IPC Invoke: ${channel}`, args);
+          if (channel === 'get-env') return { platform: 'web' };
+          return true;
+        },
+        getEnv: async () => ({ isDevelopment: false, platform: 'web' }),
+        checkDbAccess: async () => true,
+        getDbDefaultPath: async () => ':memory:',
+        on: (channel, callback) => console.log(`Registered listener for ${channel}`)
+      };
+    </script>
   </head>
-  <body></body>
-  <script>
-  // تعريف ipc وهمي في أول لحظة للمتصفح
-  window.ipc = {
-    getEnv: async () => ({
-      isDevelopment: false,
-      platform: 'linux', 
-      version: '1.0.0-web-prototype'
-    }),
-    checkDbAccess: async () => true,
-    getDbDefaultPath: async () => ':memory:',
-    checkForUpdates: async () => {},
-    initScheduler: async () => {},
-    // لو فيه أخطاء تانية ظهرت بأسماء وظائف معينة ضيفها هنا
-  };
-</script>
-  <script type="module" src="./renderer.ts"></script>
+  
+  <body>
+    <div id="app"></div>
+    
+    <script type="module" src="./renderer.ts"></script>
+  </body>
 </html>
