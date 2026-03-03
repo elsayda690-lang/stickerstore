@@ -1,0 +1,33 @@
+name: Deploy Web Prototype
+
+on:
+  push:
+    branches: [ "main" ] # 👈 كل ما ترفع كود على الـ main، الـ Workflow هتشتغل
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 👈 بيئة تشغيل سريعة للويب
+
+    steps:
+    - uses: actions/checkout@v4 # 👈 بيجيب الكود بتاعك
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3 # 👈 بيثبت Node.js
+      with:
+        node-version: '18'
+
+    - name: Install Dependencies
+      run: yarn install # 👈 بيثبت المكتبات اللي المشروع محتاجها
+
+    - name: Build Web App
+      run: |
+        # 👈 الأمر ده بيعمل Build للـ Frontend وبيرمي ملفات الويب في مجلد اسمه dist
+        yarn vite build
+      env:
+        NODE_ENV: production # 👈 بيعرف الـ Build إنه للإنتاج
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3 # 👈 بيحفظ ملفات الويب عشان Vercel ياخدها
+      with:
+        name: web-prototype
+        path: dist/ # 👈 ده المجلد النهائي
