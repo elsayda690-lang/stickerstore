@@ -27,7 +27,7 @@ jobs:
         NODE_ENV: production # 👈 بيعرف الـ Build إنه للإنتاج
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3 # 👈 بيحفظ ملفات الويب عشان Vercel ياخدها
+      uses: actions/upload-artifact@v4 # 👈 حدثنا دي لـ v4 عشان المشكلة
       with:
         name: web-prototype
         path: dist/ # 👈 ده المجلد النهائي
