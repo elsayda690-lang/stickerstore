@@ -2,32 +2,36 @@ name: Deploy Web Prototype
 
 on:
   push:
-    branches: [ "main" ] # 👈 كل ما ترفع كود على الـ main، الـ Workflow هتشتغل
+    branches: [ "main" ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest # 👈 بيئة تشغيل سريعة للويب
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4 # 👈 بيجيب الكود بتاعك
+    - uses: actions/checkout@v4
 
     - name: Set up Node.js
-      uses: actions/setup-node@v3 # 👈 بيثبت Node.js
+      uses: actions/setup-node@v3
       with:
         node-version: '18'
 
     - name: Install Dependencies
-      run: yarn install # 👈 بيثبت المكتبات اللي المشروع محتاجها
+      run: yarn install
 
     - name: Build Web App
       run: |
-        # 👈 الأمر ده بيعمل Build للـ Frontend وبيرمي ملفات الويب في مجلد اسمه dist
         yarn vite build
       env:
-        NODE_ENV: production # 👈 بيعرف الـ Build إنه للإنتاج
+        NODE_ENV: production
+
+    # الخطوة دي هتورينا الملفات فين بالظبط عشان نتأكد 100%
+    - name: Debug File Structure
+      run: ls -R books/dist_electron/build/src/ || ls -R dist/
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v4 # 👈 حدثنا دي لـ v4 عشان المشكلة
+      uses: actions/upload-artifact@v4
       with:
         name: web-prototype
-        path: dist/ # 👈 ده المجلد النهائي
+        # تعديل المسار للمكان اللي إنت قلته
+        path: books/dist_electron/build/src/
