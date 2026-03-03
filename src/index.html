@@ -1,39 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Frappe Books</title>
-    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frappe Books - Web</title>
     <script>
-      window.ipc = {
-        get: async (key) => {
-          console.log('IPC Get called for:', key);
-          const mocks = {
-            'env': { isDevelopment: false, platform: 'web' },
-            'config': {},
-            'is-dev': false
-          };
-          return mocks[key] || null;
-        },
-        send: (channel, ...args) => console.log(`IPC Send: ${channel}`, args),
-        invoke: async (channel, ...args) => {
-          console.log(`IPC Invoke: ${channel}`, args);
-          if (channel === 'get-env') return { platform: 'web' };
-          return true;
-        },
-        getEnv: async () => ({ isDevelopment: false, platform: 'web' }),
-        checkDbAccess: async () => true,
-        getDbDefaultPath: async () => ':memory:',
-        on: (channel, callback) => console.log(`Registered listener for ${channel}`)
-      };
+        (function() {
+            // تعريف الوظائف الوهمية بناءً على تحليلك للباورشيل
+            const mockIpc = {
+                // التعامل مع قواعد البيانات (db)
+                db: {
+                    getSchema: async () => [],
+                    connect: async () => true,
+                    create: async () => true,
+                    call: async () => ({}),
+                    bespoke: async () => ({})
+                },
+                // التعامل مع المخزن والإعدادات (store / config)
+                store: {}, 
+                get: async (key) => {
+                    const data = { 'env': { platform: 'web' }, 'is-dev': false };
+                    return data[key] || {};
+                },
+                // وظائف النظام الأساسية
+                getEnv: async () => ({ isDevelopment: false, platform: 'web', version: '1.0.0-web-prototype' }),
+                checkDbAccess: async () => true,
+                getDbDefaultPath: async (name) => `:memory:`,
+                getDbList: async () => [],
+                checkForUpdates: async () => ({}),
+                initScheduler: async () => {},
+                // وظائف الواجهة (Window/Files)
+                minimizeWindow: () => {},
+                toggleMaximize: () => {},
+                closeWindow: () => {},
+                isMaximized: async () => false,
+                isFullscreen: async () => false,
+                openLink: (url) => window.open(url, '_blank'),
+                selectFile: async () => ({ success: false, canceled: true }),
+                getSaveFilePath: async () => ({ canceled: true }),
+                saveData: async () => true,
+                // وظائف الطباعة والـ PDF
+                makePDF: async () => true,
+                printDocument: async () => true,
+                getTemplates: async () => [],
+                // المستمعين (Listeners)
+                registerMainProcessErrorListener: () => {},
+                registerTriggerFrontendActionListener: () => {},
+                registerConsoleLogListener: () => {},
+                on: () => {},
+                send: () => {},
+                invoke: async () => ({})
+            };
+
+            // استخدام Proxy لمنع أي TypeError لو نادى وظيفة مش موجودة
+            const safeHandler = {
+                get: (target, prop) => {
+                    if (prop in target) return target[prop];
+                    // لو نادى حاجة ناقصة زي sendAPIRequest، بنعملها "توليد تلقائي"
+                    return async (...args) => {
+                        console.log(`[IPC Mock] Calling: ${String(prop)}`, args);
+                        return {};
+                    };
+                }
+            };
+
+            const proxy = new Proxy(mockIpc, safeHandler);
+
+            // زرع الـ Proxy في كل المداخل اللي ظهرت في الـ PowerShell
+            window.ipc = proxy;
+            window.electron = { ipcRenderer: proxy };
+            window.process = { 
+                platform: 'web', 
+                env: { NODE_ENV: 'production' },
+                nextTick: (cb) => setTimeout(cb, 0)
+            };
+        })();
     </script>
-  </head>
-  
-  <body>
+</head>
+<body>
     <div id="app"></div>
-    
     <script type="module" src="./renderer.ts"></script>
-  </body>
+</body>
 </html>
