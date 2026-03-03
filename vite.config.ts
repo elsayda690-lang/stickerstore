@@ -19,6 +19,8 @@ export default () => {
   }
 
   return defineConfig({
+    // السطر ده هو السر! بيخلي المسارات نسبية عشان تشتغل على GitHub Pages
+    base: './', 
     server: { host, port, strictPort: true },
     root: path.resolve(__dirname, './src'),
     plugins: [vue()],
@@ -37,5 +39,10 @@ export default () => {
         fixtures: path.resolve(__dirname, './fixtures'),
       },
     },
+    // إضافة لضمان بناء الملفات في المجلد الصح
+    build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+    }
   });
 };
