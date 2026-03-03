@@ -3,12 +3,17 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch: # عشان تقدر تشغله يدوي لو حبيت
 
-# تصريح بالصلاحيات للنشر على Pages
 permissions:
   contents: read
   pages: write
   id-token: write
+
+# عشان لو عملت Push مرتين ورا بعض، يلغي القديم ويشغل الجديد
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
@@ -29,11 +34,10 @@ jobs:
       env:
         NODE_ENV: production
 
-    # خطوة النشر الحقيقية
+    # أهم خطوة: رفع الملفات تحت اسم فريد
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        # المسار اللي إنت اكتشفته بنفسك
         path: src/dist/
 
     - name: Deploy to GitHub Pages
