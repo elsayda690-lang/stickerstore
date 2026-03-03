@@ -20,18 +20,20 @@ jobs:
       run: yarn install
 
     - name: Build Web App
-      run: |
-        yarn vite build
+      run: yarn vite build
       env:
         NODE_ENV: production
 
-    # الخطوة دي هتورينا الملفات فين بالظبط عشان نتأكد 100%
-    - name: Debug File Structure
-      run: ls -R books/dist_electron/build/src/ || ls -R dist/
+    # الخطوة دي "جوكر" عشان نلاقي المجلد في أي مكان
+    - name: Find Dist Folder
+      run: |
+        find . -name "dist" -type d
+        echo "Found at: $(find . -name "dist" -type d)"
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: web-prototype
-        # تعديل المسار للمكان اللي إنت قلته
-        path: books/dist_electron/build/src/
+        # العلامة دي (**/) معناها دور في كل المجلدات الفرعية وهات أي فولدر اسمه dist
+        path: "**/dist/"
+        if-no-files-found: error
