@@ -7,5 +7,20 @@
     <title>Frappe Books</title>
   </head>
   <body></body>
+  <script>
+  // تعريف ipc وهمي في أول لحظة للمتصفح
+  window.ipc = {
+    getEnv: async () => ({
+      isDevelopment: false,
+      platform: 'linux', 
+      version: '1.0.0-web-prototype'
+    }),
+    checkDbAccess: async () => true,
+    getDbDefaultPath: async () => ':memory:',
+    checkForUpdates: async () => {},
+    initScheduler: async () => {},
+    // لو فيه أخطاء تانية ظهرت بأسماء وظائف معينة ضيفها هنا
+  };
+</script>
   <script type="module" src="./renderer.ts"></script>
 </html>
