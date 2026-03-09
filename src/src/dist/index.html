@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frappe Books - Web Prototype</title>
+    <script>
+        (function() {
+            // 1. تعريف الوظائف الأساسية للـ IPC
+            const mockIpc = {
+                db: {
+                    getSchema: async () => [],
+                    connect: async () => true,
+                    create: async () => true,
+                    call: async () => ({}),
+                    bespoke: async () => ({})
+                },
+                get: async (key) => {
+                    const data = { 'env': { platform: 'web' }, 'is-dev': false };
+                    return data[key] || {};
+                },
+                getEnv: async () => ({ isDevelopment: false, platform: 'web', version: '1.0.0-web' }),
+                checkDbAccess: async () => true,
+                getDbDefaultPath: async () => `:memory:`,
+                getDbList: async () => [],
+                on: () => {},
+                send: () => {},
+                invoke: async () => ({})
+            };
+
+            // 2. الـ Proxy السحري لمنع أي TypeError
+            const safeHandler = {
+                get: (target, prop) => {
+                    if (prop in target) return target[prop];
+                    // توليد وظيفة وهمية لأي حاجة ناقصة (زي get, set, الخ)
+                    return (...args) => {
+                        console.log(`[Mock] Called: ${String(prop)}`, args);
+                        // لو الوظيفة المطلوبة هي 'get' بنرجع قيمة افتراضية
+                        if (prop === 'get') return (key) => ({ 'language': 'en', 'theme': 'light' }[key]);
+                        return {};
+                    };
+                }
+            };
+
+            const safeMock = new Proxy(mockIpc, safeHandler);
+
+            // 3. زرع الخديعة في كل مكان ممكن البرنامج يدور فيه
+            window.ipc = safeMock;
+            window.electron = { ipcRenderer: safeMock };
+            
+            // حل مشكلة this.config.get
+            window.config = safeMock; 
+            
+            // حل مشكلة store
+            window.store = safeMock;
+
+            // بيئة العمل
+            window.process = { 
+                platform: 'web', 
+                env: { NODE_ENV: 'production' },
+                nextTick: (cb) => setTimeout(cb, 0)
+            };
+
+            // خديعة require
+            window.require = function(mod) {
+                if (mod === 'electron') return { ipcRenderer: safeMock, remote: safeMock };
+                return safeMock;
+            };
+        })();
+    </script>
+  <script type="module" crossorigin src="./assets/index-vMjndtix.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-BOB4h9lg.css">
+</head>
+<body>
+    <div id="app"></div>
+</body>
+</html>

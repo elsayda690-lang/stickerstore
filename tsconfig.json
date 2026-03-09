@@ -12,9 +12,11 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "sourceMap": true,
-    "types": ["webpack-env", "node", "vite/client"], 
+    "types": ["node", "vite/client"], 
     "baseUrl": ".",
     "paths": {
+      "@/*": ["src/*"],
+      "fyo/*": ["fyo/*"],
       "src/*": ["src/*"],
       "schemas/*": ["schemas/*"],
       "main/*": ["main/*"],
@@ -29,7 +31,10 @@
     "lib": ["esnext", "dom", "dom.iterable", "scripthost"]
   },
   "ts-node": {
-    "files": true
+    "files": true,
+    "compilerOptions": {
+      "module": "commonjs"
+    }
   },
   "include": [
     "src/**/*.ts",
@@ -51,5 +56,5 @@
     "jobs/**/*.ts",
     "vite.config.ts" 
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/dist"]
 }
