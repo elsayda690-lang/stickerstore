@@ -1,44 +1,14 @@
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch: # عشان تقدر تشغله يدوي لو حبيت
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# عشان لو عملت Push مرتين ورا بعض، يلغي القديم ويشغل الجديد
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-
-    - name: Install Dependencies
-      run: yarn install
-
-    - name: Build Web App
+- name: Build Web App
       run: yarn vite build
       env:
         NODE_ENV: production
+        # دول اللي هيخلو رابط سوبابيز يظهر في الكود بدل undefined
+        VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-    # أهم خطوة: رفع الملفات تحت اسم فريد
     - name: Upload Pages Artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: src/dist/
-
-    - name: Deploy to GitHub Pages
-      uses: actions/deploy-pages@v4
+        # اتأكد لو Vite بيطلع الملفات في dist أو src/dist 
+        # المعتاد في Vite هو dist فقط
+        path: dist/
