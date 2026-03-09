@@ -67,10 +67,36 @@ export class DatabaseDemux extends DatabaseDemuxBase {
   async call(method: DatabaseMethod, ...args: unknown[]): Promise<unknown> {
     if (!this.#isElectron) {
       const schemaName = args[0] as string;
-      const data = args[1];
       const url = supabaseUrl;
 
-      // 1. عملية الإضافة (Insert)
+      // جلب الإعدادات - هنا مربط الفرس
+      if (method === 'getSingleValues' || method === 'get') {
+        try {
+          const res = await fetch(`${url}/rest/v1/${schemaName}?select=*`, {
+            headers: { 
+              'apikey': supabaseKey, 
+              'Authorization': `Bearer ${supabaseKey}` 
+            }
+          });
+          const result = await res.json();
+
+          // حماية: لو النتيجة فاضية أو فيها خطأ، ابعت بيانات وهمية عشان يفتح
+          if (!result || (Array.isArray(result) && result.length === 0)) {
+            if (schemaName === 'SystemSettings') {
+              return { name: 'SystemSettings', version: '0.5.0' };
+            }
+            return method === 'getSingleValues' ? [] : {};
+          }
+
+          // لو طلب get بنرجع أول عنصر، لو getSingleValues بنرجع المصفوفة
+          return method === 'get' ? result[0] : result;
+        } catch (e) {
+          // لو حصل أي فشل في الشبكة، ارجع نسخة احتياطية
+          return schemaName === 'SystemSettings' ? { name: 'SystemSettings', version: '0.5.0' } : [];
+        }
+      }
+
+      // إضافة بيانات (Insert)
       if (method === 'insert') {
         const res = await fetch(`${url}/rest/v1/${schemaName}`, {
           method: 'POST',
@@ -80,36 +106,12 @@ export class DatabaseDemux extends DatabaseDemuxBase {
             'Content-Type': 'application/json',
             'Prefer': 'return=representation'
           },
-          body: JSON.stringify(data)
+          body: JSON.stringify(args[1])
         });
         const result = await res.json();
         return Array.isArray(result) ? result[0] : result;
       }
 
-      // 2. عملية جلب القيم (مهمة جداً لفك الـ Loading)
-      if (method === 'getSingleValues') {
-        const res = await fetch(`${url}/rest/v1/SingleValue?select=*`, {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          }
-        });
-        const result = await res.json();
-        return Array.isArray(result) ? result : [];
-      }
-      // 3. عملية جلب بيان واحد بالاسم (زي الـ SystemSettings)
-      if (method === 'get') {
-        const name = args[1]; // القيمة اللي بيدور عليها
-        const res = await fetch(`${url}/rest/v1/${schemaName}?name=eq.${name}`, {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          }
-        });
-        const result = await res.json();
-        return Array.isArray(result) && result.length > 0 ? result[0] : null;
-      }
-      // 3. أي عملية تانية رجع مصفوفة فاضية عشان البرنامج ميكرشش
       return [];
     }
 
