@@ -97,7 +97,18 @@ export class DatabaseDemux extends DatabaseDemuxBase {
         const result = await res.json();
         return Array.isArray(result) ? result : [];
       }
-
+      // 3. عملية جلب بيان واحد بالاسم (زي الـ SystemSettings)
+      if (method === 'get') {
+        const name = args[1]; // القيمة اللي بيدور عليها
+        const res = await fetch(`${url}/rest/v1/${schemaName}?name=eq.${name}`, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`
+          }
+        });
+        const result = await res.json();
+        return Array.isArray(result) && result.length > 0 ? result[0] : null;
+      }
       // 3. أي عملية تانية رجع مصفوفة فاضية عشان البرنامج ميكرشش
       return [];
     }
