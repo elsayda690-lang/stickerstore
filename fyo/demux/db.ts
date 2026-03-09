@@ -68,9 +68,11 @@ export class DatabaseDemux extends DatabaseDemuxBase {
     if (!this.#isElectron) {
       const schemaName = args[0] as string;
       const data = args[1];
+      const url = supabaseUrl;
 
+      // 1. عملية الإضافة (Insert)
       if (method === 'insert') {
-        const res = await fetch(`${supabaseUrl}/rest/v1/${schemaName}`, {
+        const res = await fetch(`${url}/rest/v1/${schemaName}`, {
           method: 'POST',
           headers: {
             'apikey': supabaseKey,
@@ -81,9 +83,23 @@ export class DatabaseDemux extends DatabaseDemuxBase {
           body: JSON.stringify(data)
         });
         const result = await res.json();
-        return result[0];
+        return Array.isArray(result) ? result[0] : result;
       }
-      return null;
+
+      // 2. عملية جلب القيم (مهمة جداً لفك الـ Loading)
+      if (method === 'getSingleValues') {
+        const res = await fetch(`${url}/rest/v1/SingleValue?select=*`, {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`
+          }
+        });
+        const result = await res.json();
+        return Array.isArray(result) ? result : [];
+      }
+
+      // 3. أي عملية تانية رجع مصفوفة فاضية عشان البرنامج ميكرشش
+      return [];
     }
 
     return await this.#handleDBCall(async () => {
