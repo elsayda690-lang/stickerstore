@@ -47,7 +47,7 @@ export default () => {
       rollupOptions: {
         // منع Rollup من محاولة البحث عن مكتبات النظام
         external: [
-          'electron', 'fs', 'path', 'crypto', 'os','main', 'bree', 
+          'electron', 'fs', 'path', 'crypto', 'os','main', 'bree', 'better-sqlite3',
           'child_process', 'http', 'url', 'zlib', 'events'
         ],
         output: {
