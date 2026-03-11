@@ -31,7 +31,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Build Web App
-        run: npx vite build --base=/frappe-books/ # تأكد من وضع اسم المستودع هنا لو مش Custom Domain
+        run: npx vite build --base=./
         env:
           NODE_ENV: production
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
