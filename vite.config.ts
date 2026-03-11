@@ -28,6 +28,7 @@ export default () => {
         'main': path.resolve(__dirname, './src/renderer.ts'), // حل مشكلة initSheduler
         'bree': path.resolve(__dirname, './src/renderer.ts'),
         './main/initSheduler': path.resolve(__dirname, './src/renderer.ts'),
+        'fs/promises': path.resolve(__dirname, './src/renderer.ts'),
         // --- باقي الـ Aliases الخاصة بك ---
         fyo: path.resolve(__dirname, './fyo'),
         src: path.resolve(__dirname, './src'),
@@ -47,7 +48,7 @@ export default () => {
       rollupOptions: {
         // منع Rollup من محاولة البحث عن مكتبات النظام
         external: [
-          'electron', 'fs', 'path', 'crypto', 'os','main', 'bree', 'better-sqlite3',
+          'electron', 'fs', 'path', 'crypto', 'os','main', 'bree', 'better-sqlite3', 'fs', 'fs/promises',
           'child_process', 'http', 'url', 'zlib', 'events'
         ],
         output: {
