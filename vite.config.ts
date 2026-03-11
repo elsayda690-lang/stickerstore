@@ -5,34 +5,26 @@ import { defineConfig } from 'vite';
 export default () => {
   return defineConfig({
     base: './', 
-    root: path.resolve(__dirname, './src'),
+    root: path.resolve(__dirname, './src'), // الـ Root بتاعك هو src
     plugins: [vue()],
     resolve: {
       alias: {
         vue: 'vue/dist/vue.esm-bundler.js',
-        // هنا السر: بنخلي Vite يستبدل المكتبات دي بمحتوى ملف الـ Mock بتاعنا
-        'electron': path.resolve(__dirname, 'renderer.ts'),
-        'fs': path.resolve(__dirname, 'renderer.ts'),
-        'fs/promises': path.resolve(__dirname, 'renderer.ts'),
-        'path': path.resolve(__dirname, 'renderer.ts'),
-        'crypto': path.resolve(__dirname, 'renderer.ts'),
-        'os': path.resolve(__dirname, 'renderer.ts'),
-        'child_process': path.resolve(__dirname, 'renderer.ts'),
-        'main': path.resolve(__dirname, 'renderer.ts'),
-        'bree': path.resolve(__dirname, 'renderer.ts'),
-        'better-sqlite3': path.resolve(__dirname, 'renderer.ts'),
+        // هنا بنقول لـ Vite يروح فين بالظبط لما يشوف كلمة backend أو غيرها
+        'backend': path.resolve(__dirname, './backend'),
+        'main': path.resolve(__dirname, './src/renderer.ts'), 
+        'electron': path.resolve(__dirname, './src/renderer.ts'),
+        // إضافة alias لكل المسارات اللي بره src ومحتاجها في الـ build
+        'schemas': path.resolve(__dirname, './schemas'),
+        'models': path.resolve(__dirname, './models'),
       },
     },
     build: {
-      outDir: 'dist',
+      outDir: '../dist', // عشان يرمي الـ build بره الـ src
       emptyOutDir: true,
       rollupOptions: {
-        // ممنوع نحط fs أو أي مكتبة Node هنا في الـ external 
-        // عشان Vite يضطر يستخدم الـ Alias اللي فوق
-        external: [], 
-        output: {
-          manualChunks: undefined,
-        },
+        // أي حاجة تانية تطلع Error ضيفها هنا في الـ external مؤقتاً
+        external: ['electron', 'better-sqlite3', 'bree'],
       },
     }
   });
