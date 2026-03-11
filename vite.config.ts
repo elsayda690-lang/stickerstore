@@ -2,17 +2,10 @@ import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import { defineConfig } from 'vite';
 
-/**
- * This vite config file is used only for dev mode, i.e.
- * to create a serve build modules of the source code
- * which will be rendered by electron.
- *
- * For building the project, vite is used programmatically
- * see build/scripts/build.mjs for this.
- */
 export default () => {
   let port = 6969;
   let host = '0.0.0.0';
+  
   if (process.env.VITE_PORT && process.env.VITE_HOST) {
     port = Number(process.env.VITE_PORT);
     host = process.env.VITE_HOST;
@@ -27,6 +20,7 @@ export default () => {
     resolve: {
       alias: {
         vue: 'vue/dist/vue.esm-bundler.js',
+        // تم تعديل المسارات لتكون صحيحة بالنسبة لـ root (src)
         fyo: path.resolve(__dirname, './fyo'),
         src: path.resolve(__dirname, './src'),
         schemas: path.resolve(__dirname, './schemas'),
@@ -39,10 +33,16 @@ export default () => {
         fixtures: path.resolve(__dirname, './fixtures'),
       },
     },
-    // إضافة لضمان بناء الملفات في المجلد الصح
     build: {
+      // الـ Build هيطلع في src/dist عشان يطابق الـ workflow بتاعنا
       outDir: 'dist',
       emptyOutDir: true,
+      rollupOptions: {
+        // تأمين عدم خروج أخطاء في الـ chunks الكبيرة
+        output: {
+          manualChunks: undefined,
+        },
+      },
     }
   });
 };
