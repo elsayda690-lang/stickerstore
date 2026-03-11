@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # المسار الافتراضي لـ Vite هو dist في الـ root
-          path: dist/
+          path: src/dist/
 
       - name: Deploy to GitHub Pages
         id: deployment
