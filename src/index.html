@@ -3,74 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frappe Books - Web Prototype</title>
+    <title>Frappe Books - Web Edition</title>
     <script>
         (function() {
-            // 1. تعريف الوظائف الأساسية للـ IPC
+            // 1. تعريف وظائف الـ IPC المحسنة للـ Demo
             const mockIpc = {
+                getEnv: async () => ({ isDevelopment: false, platform: 'linux', version: '1.0.0-web' }),
+                checkDbAccess: async () => true,
+                getDbDefaultPath: async () => ':memory:',
+                getDbList: async () => [],
+                // حل مشكلة الديمو: نرجع مسار وهمي فوراً
+                getSaveFilePath: async () => ({ filePath: 'demo.db', canceled: false }),
+                showOpenDialog: async () => ({ filePaths: ['demo.db'], canceled: false }),
+                
                 db: {
                     getSchema: async () => [],
                     connect: async () => true,
                     create: async () => true,
-                    call: async () => ({}),
-                    bespoke: async () => ({})
+                    // صمام أمان للـ Dashboard: نرجع مصفوفات فاضية بدل undefined
+                    call: async (method) => {
+                        console.log(`[Mock DB Call]: ${method}`);
+                        return method.startsWith('get') ? [] : {};
+                    },
+                    bespoke: async (method) => {
+                        console.log(`[Mock Bespoke]: ${method}`);
+                        if (method === 'getTotalOutstanding') return { total: 0, outstanding: 0 };
+                        return [];
+                    }
                 },
-                get: async (key) => {
-                    const data = { 'env': { platform: 'web' }, 'is-dev': false };
-                    return data[key] || {};
-                },
-                getEnv: async () => ({ isDevelopment: false, platform: 'web', version: '1.0.0-web' }),
-                checkDbAccess: async () => true,
-                getDbDefaultPath: async () => `:memory:`,
-                getDbList: async () => [],
+                get: async (key) => ({ 'language': 'en', 'theme': 'light' }[key] || {}),
                 on: () => {},
                 send: () => {},
-                invoke: async () => ({})
+                invoke: async (channel, ...args) => {
+                    if (channel === 'get-save-path') return 'demo.db';
+                    return {};
+                }
             };
 
-            // 2. الـ Proxy السحري لمنع أي TypeError
+            // 2. البروكسي الذكي لمنع أي TypeError مفاجئ
             const safeHandler = {
                 get: (target, prop) => {
                     if (prop in target) return target[prop];
-                    // توليد وظيفة وهمية لأي حاجة ناقصة (زي get, set, الخ)
-                    return (...args) => {
-                        console.log(`[Mock] Called: ${String(prop)}`, args);
-                        // لو الوظيفة المطلوبة هي 'get' بنرجع قيمة افتراضية
-                        if (prop === 'get') return (key) => ({ 'language': 'en', 'theme': 'light' }[key]);
-                        return {};
+                    return async (...args) => {
+                        console.log(`[Mock] Missing Method Called: ${String(prop)}`, args);
+                        if (String(prop).toLowerCase().includes('path')) return 'demo.db';
+                        return Array.isArray(args[0]) ? [] : {};
                     };
                 }
             };
 
             const safeMock = new Proxy(mockIpc, safeHandler);
 
-            // 3. زرع الخديعة في كل مكان ممكن البرنامج يدور فيه
+            // 3. تثبيت الخديعة في المتصفح
             window.ipc = safeMock;
             window.electron = { ipcRenderer: safeMock };
-            
-            // حل مشكلة this.config.get
-            window.config = safeMock; 
-            
-            // حل مشكلة store
+            window.config = safeMock;
             window.store = safeMock;
-
-            // بيئة العمل
-            window.process = { 
-                platform: 'web', 
-                env: { NODE_ENV: 'production' },
-                nextTick: (cb) => setTimeout(cb, 0)
-            };
-
-            // خديعة require
-            window.require = function(mod) {
-                if (mod === 'electron') return { ipcRenderer: safeMock, remote: safeMock };
-                return safeMock;
-            };
+            window.require = (mod) => (mod === 'electron' ? { ipcRenderer: safeMock } : safeMock);
+            window.process = { platform: 'web', env: { NODE_ENV: 'production' }, nextTick: (cb) => setTimeout(cb, 0) };
         })();
     </script>
 </head>
 <body>
     <div id="app"></div>
-    <script type="module" src="/renderer.ts"></script>
+    <script type="module" src="/src/renderer.ts"></script>
 </body>
 </html>

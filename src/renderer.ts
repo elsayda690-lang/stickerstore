@@ -1,147 +1,56 @@
 // @ts-nocheck
-// --- بداية "خدعة" الويب الاحترافية لـ GitHub Pages ---
-if (typeof window !== 'undefined' && !window.ipc) {
-  const webMock = {
-    getEnv: async () => ({
-      isDevelopment: false,
-      platform: 'linux', 
-      version: '1.0.0-web-prototype'
-    }),
-    checkDbAccess: async () => true,
-    getDbDefaultPath: async () => ':memory:',
-    getDbList: async () => [],
-    checkForUpdates: async () => {},
-    initScheduler: async () => {},
-    get: (key) => {
-      const defaults = { 'language': 'en', 'theme': 'light' };
-      return defaults[key] || {};
-    },
-    invoke: async () => ({}),
-    send: () => {},
-    on: () => {}
-  };
-
-  window.ipc = webMock;
-  window.config = webMock;
-  window.electron = { ipcRenderer: webMock };
-}
-// --- نهاية "الخدعة" ---
-
-import { CUSTOM_EVENTS } from 'utils/messages';
-import { UnexpectedLogObject } from 'utils/types';
-import { App as VueApp, createApp } from 'vue';
+import { createApp } from 'vue';
 import App from './App.vue';
-import Badge from './components/Badge.vue';
-import FeatherIcon from './components/FeatherIcon.vue';
-import { handleError, sendError } from './errorHandling';
-import { fyo } from './initFyo';
-import { outsideClickDirective } from './renderer/helpers';
-import registerIpcRendererListeners from './renderer/registerIpcRendererListeners';
 import router from './router';
-import { stringifyCircular } from './utils';
-import { setLanguageMap } from './utils/language';
+import { fyo } from './initFyo';
+import FeatherIcon from './components/FeatherIcon.vue';
+import Badge from './components/Badge.vue';
+import { outsideClickDirective } from './renderer/helpers';
 
-// دالة تحديد نظام التشغيل (عشان الـ ReferenceError يختفي)
-function getPlatformName(platform: string) {
-  switch (platform) {
-    case 'win32': return 'Windows';
-    case 'darwin': return 'Mac';
-    case 'linux': return 'Linux';
-    default: return 'Linux';
-  }
+// 1. التأكد من وجود الـ Mock قبل البدء (صمام أمان إضافي)
+if (typeof window !== 'undefined' && !window.ipc) {
+    console.warn("IPC Mock not found in HTML, injecting fallback...");
+    window.ipc = {
+        getEnv: async () => ({ isDevelopment: false, platform: 'web', version: '1.0.0' }),
+        invoke: async () => ({}),
+        on: () => {},
+        send: () => {},
+        db: { call: async () => [], bespoke: async () => ({}) }
+    };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
 (async () => {
-  const language = fyo.config.get('language') as string;
-  if (language) {
-    await setLanguageMap(language);
-  }
-  fyo.store.language = language || 'English';
+    // 2. محاكاة إعدادات اللغة (عشان ما يضربش وهو بيقرأ Config)
+    try {
+        const language = (await window.ipc.get('language')) || 'English';
+        fyo.store.language = language;
+    } catch (e) {
+        fyo.store.language = 'English';
+    }
 
-  if (window.ipc && window.ipc.getEnv && !window.ipc.getEnv.toString().includes('web-prototype')) {
-    registerIpcRendererListeners();
-  }
+    // 3. جلب بيانات البيئة من الـ Mock
+    const { isDevelopment, platform, version } = await window.ipc.getEnv();
+    fyo.store.isDevelopment = isDevelopment;
+    fyo.store.appVersion = version;
+    fyo.store.platform = platform;
 
-  // @ts-ignore
-  const { isDevelopment, platform, version } = await window.ipc.getEnv();
+    // 4. بناء تطبيق Vue
+    const app = createApp(App);
 
-  fyo.store.isDevelopment = isDevelopment;
-  fyo.store.appVersion = version;
-  fyo.store.platform = platform;
-  const platformName = getPlatformName(platform);
+    app.use(router);
+    app.component('FeatherIcon', FeatherIcon);
+    app.component('Badge', Badge);
+    app.directive('on-outside-click', outsideClickDirective);
 
-  setOnWindow(isDevelopment);
+    // 5. حقن الـ Global Properties (عشان الـ HTML يعرف يوصل لـ fyo)
+    app.config.globalProperties.fyo = fyo;
+    app.config.globalProperties.t = fyo.t;
+    app.config.globalProperties.T = fyo.T;
 
-  const app = createApp({
-    template: '<App/>',
-  });
-  
-  app.config.unwrapInjectedRef = true;
-  setErrorHandlers(app);
-
-  app.use(router);
-  app.component('App', App);
-  app.component('FeatherIcon', FeatherIcon);
-  app.component('Badge', Badge);
-  app.directive('on-outside-click', outsideClickDirective);
-  
-  app.mixin({
-    computed: {
-      fyo() { return fyo; },
-      platform() { return platformName; },
-    },
-    methods: {
-      t: fyo.t,
-      T: fyo.T,
-    },
-  });
-
-  await fyo.telemetry.logOpened();
-  
-  // التأكد من وجود العنصر قبل عمل mount
-  const root = document.getElementById('app') || document.body;
-  app.mount(root); 
+    // 6. التشغيل النهائي
+    const root = document.getElementById('app');
+    if (root) {
+        app.mount(root);
+        console.log("🚀 Frappe Books Web Version Mounted!");
+    }
 })();
-
-function setErrorHandlers(app: VueApp) {
-  window.onerror = (message, source, lineno, colno, error) => {
-    error = error ?? new Error('triggered in window.onerror');
-    handleError(true, error, { message, source, lineno, colno });
-  };
-
-  window.onunhandledrejection = (event: PromiseRejectionEvent) => {
-    let error: Error;
-    if (event.reason instanceof Error) {
-      error = event.reason;
-    } else {
-      error = new Error(String(event.reason));
-    }
-    handleError(true, error).catch((err) => console.error(err));
-  };
-
-  window.addEventListener(CUSTOM_EVENTS.LOG_UNEXPECTED, (event) => {
-    const details = (event as CustomEvent)?.detail as UnexpectedLogObject;
-    sendError(details);
-  });
-
-  app.config.errorHandler = (err, vm, info) => {
-    const more: Record<string, unknown> = { info };
-    if (vm) {
-      const { fullPath, params } = vm.$route;
-      more.fullPath = fullPath;
-      more.params = stringifyCircular(params ?? {});
-      more.props = stringifyCircular(vm.$props ?? {}, true, true);
-    }
-    handleError(false, err as Error, more);
-    console.error(err, vm, info);
-  };
-}
-
-function setOnWindow(isDevelopment: boolean) {
-  if (!isDevelopment) return;
-  // @ts-ignore
-  window.router = router;
-  // @ts-ignore
-  window.fyo = fyo;
-}
