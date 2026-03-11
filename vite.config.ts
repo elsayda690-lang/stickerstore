@@ -12,7 +12,6 @@ export default () => {
   }
 
   return defineConfig({
-    // السطر ده هو السر! بيخلي المسارات نسبية عشان تشتغل على GitHub Pages
     base: './', 
     server: { host, port, strictPort: true },
     root: path.resolve(__dirname, './src'),
@@ -20,7 +19,16 @@ export default () => {
     resolve: {
       alias: {
         vue: 'vue/dist/vue.esm-bundler.js',
-        // تم تعديل المسارات لتكون صحيحة بالنسبة لـ root (src)
+        // --- حجر الزاوية: خداع الكود الذي يحتاج ديسكتوب ---
+        'electron': path.resolve(__dirname, './src/renderer.ts'),
+        'fs': path.resolve(__dirname, './src/renderer.ts'),
+        'path': path.resolve(__dirname, './src/renderer.ts'),
+        'crypto': path.resolve(__dirname, './src/renderer.ts'),
+        'os': path.resolve(__dirname, './src/renderer.ts'),
+        'main': path.resolve(__dirname, './src/renderer.ts'), // حل مشكلة initSheduler
+        'bree': path.resolve(__dirname, './src/renderer.ts'),
+        './main/initSheduler': path.resolve(__dirname, './src/renderer.ts'),
+        // --- باقي الـ Aliases الخاصة بك ---
         fyo: path.resolve(__dirname, './fyo'),
         src: path.resolve(__dirname, './src'),
         schemas: path.resolve(__dirname, './schemas'),
@@ -34,13 +42,20 @@ export default () => {
       },
     },
     build: {
-      // الـ Build هيطلع في src/dist عشان يطابق الـ workflow بتاعنا
       outDir: 'dist',
       emptyOutDir: true,
       rollupOptions: {
-        // تأمين عدم خروج أخطاء في الـ chunks الكبيرة
+        // منع Rollup من محاولة البحث عن مكتبات النظام
+        external: [
+          'electron', 'fs', 'path', 'crypto', 'os','main', 'bree', 
+          'child_process', 'http', 'url', 'zlib', 'events'
+        ],
         output: {
           manualChunks: undefined,
+          globals: {
+            main: 'window', // بنقوله اعتبر main هي الـ window بتاع المتصفح (عشان ميعملش crash)
+            bree: 'Object'
+          },
         },
       },
     }
